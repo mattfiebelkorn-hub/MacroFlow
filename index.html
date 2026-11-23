@@ -3,1171 +3,763 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MacroFlow — AI Calorie & Macro Tracker</title>
+  <title>MacroFlow — AI Calorie, Macro & Fasting Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            surface: '#0f172a',
-            card: '#1e293b',
-            accent: '#10b981'
+            slate: {
+              850: '#172033',
+              950: '#0a0f1c'
+            }
           }
         }
       }
     };
   </script>
   <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .bar-fill { transition: width 0.25s ease; }
+    body {
+      background-color: #0a0f1c;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    }
+    .glass-card {
+      background: rgba(23, 32, 51, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      backdrop-filter: blur(10px);
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-24 md:pb-10">
-
-  <!-- Top Header -->
-  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+<body class="min-h-screen pb-20">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-lg">
-          M
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+          <i data-lucide="flame" class="w-5 h-5"></i>
         </div>
         <div>
-          <h1 class="font-bold text-lg leading-tight">MacroFlow</h1>
-          <p id="headerSubtitle" class="text-xs text-slate-400">Lose Weight • 2,100 kcal</p>
+          <h1 class="text-lg font-bold tracking-tight text-white leading-none">MacroFlow</h1>
+          <p class="text-xs text-slate-400 mt-0.5">AI Calorie, Macro & Fasting Tracker</p>
         </div>
       </div>
 
-      <!-- Desktop Tabs -->
-      <nav class="hidden md:flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl">
-        <button type="button" data-tab="today" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium bg-emerald-500 text-slate-950">Today</button>
-        <button type="button" data-tab="log" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white">Log &amp; Scan</button>
-        <button type="button" data-tab="fasting" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white">Fasting</button>
-        <button type="button" data-tab="goals" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white">Goals &amp; Key</button>
-      </nav>
-
-      <!-- Fasting Pill -->
-      <div id="fastingStatusBadge" class="text-xs px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-        Eating Window / Idle
+      <div class="flex items-center gap-2">
+        <input id="datePicker" type="date" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500" />
+        <button data-tab="goals" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center gap-1.5">
+          <i data-lucide="key-round" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Goals & Key</span>
+        </button>
       </div>
     </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="max-w-4xl mx-auto px-4 flex gap-1 overflow-x-auto pb-2">
+      <button data-tab="today" class="tab-btn active px-3.5 py-1.5 rounded-lg text-sm font-medium bg-emerald-500 text-slate-950">Today</button>
+      <button data-tab="log" class="tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800">Log & Scan</button>
+      <button data-tab="fasting" class="tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800">Fasting</button>
+      <button data-tab="goals" class="tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800">Goals & Key</button>
+    </nav>
   </header>
 
-  <!-- API Key Notice Banner -->
-  <div id="apiKeyBanner" class="max-w-5xl mx-auto px-4 pt-4 hidden">
-    <div class="bg-amber-500/10 border border-amber-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <p class="text-sm text-amber-200">
-        Add your <strong>Gemini API key</strong> to enable voice dictation parsing and nutrition label scanning.
-      </p>
-      <button type="button" data-tab="goals" class="px-3 py-1.5 rounded-lg bg-amber-400 text-slate-950 font-semibold text-xs shrink-0">
-        Set API Key
-      </button>
+  <main class="max-w-4xl mx-auto px-4 pt-5 space-y-5">
+    <!-- Status Toast -->
+    <div id="statusBanner" class="hidden rounded-xl px-4 py-3 text-sm border flex items-start justify-between gap-3">
+      <div id="statusText"></div>
+      <button id="closeBannerBtn" class="text-xs opacity-75 hover:opacity-100">Dismiss</button>
     </div>
-  </div>
 
-  <!-- Main Container -->
-  <main class="max-w-5xl mx-auto px-4 pt-5 space-y-6">
-
-    <!-- ==================== TAB 1: TODAY ==================== -->
+    <!-- TAB 1: TODAY -->
     <section id="tab-today" class="tab-panel space-y-5">
-      <!-- Date & Quick Calorie Adjuster -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <button type="button" id="prevDayBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">&lt;</button>
-            <input type="date" id="journalDate" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white" />
-            <button type="button" id="nextDayBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">&gt;</button>
-            <button type="button" id="todayBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 font-medium">Today</button>
+      <!-- Calorie & Macro Summary -->
+      <div class="glass-card rounded-2xl p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <span id="activeGoalBadge" class="inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Goal: Balanced</span>
+            <h2 class="text-xl font-bold text-white mt-1">Daily Summary</h2>
           </div>
-
-          <!-- Quick Adjustable Calories -->
-          <div class="flex items-center gap-2 bg-slate-800/90 border border-slate-700 rounded-xl px-3 py-1.5">
-            <span class="text-xs text-slate-400">Cal Target:</span>
-            <button type="button" data-cal-delta="-100" class="w-8 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-bold">-100</button>
-            <input type="number" id="quickCalInput" step="25" min="800" max="8000"
-              class="w-20 bg-slate-900 border border-slate-600 rounded-lg px-2 py-1 text-center text-sm font-semibold text-emerald-400" />
-            <button type="button" data-cal-delta="100" class="w-8 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-bold">+100</button>
+          <div class="text-right">
+            <div class="text-2xl font-extrabold text-white"><span id="calConsumed">0</span> <span class="text-sm font-normal text-slate-400">/ <span id="calTargetDisplay">2200</span> kcal</span></div>
+            <div id="calRemaining" class="text-xs text-emerald-400 font-medium">2200 kcal remaining</div>
           </div>
         </div>
 
-        <!-- Macro Progress Bars -->
-        <div id="macroSummaryGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-3"></div>
+        <!-- Calorie Progress Bar -->
+        <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden mb-5 border border-slate-800">
+          <div id="calProgressBar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Macro Bars -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="font-semibold text-sky-400">Protein</span>
+              <span class="text-slate-300"><span id="proConsumed">0</span>g / <span id="proTargetDisplay">165</span>g</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="proProgressBar" class="h-full bg-sky-400 transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="font-semibold text-amber-400">Carbs</span>
+              <span class="text-slate-300"><span id="carbConsumed">0</span>g / <span id="carbTargetDisplay">220</span>g</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="carbProgressBar" class="h-full bg-amber-400 transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-xl p-3.5 border border-slate-800">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="font-semibold text-rose-400">Fat</span>
+              <span class="text-slate-300"><span id="fatConsumed">0</span>g / <span id="fatTargetDisplay">73</span>g</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="fatProgressBar" class="h-full bg-rose-400 transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Add Shortcut -->
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-semibold text-white">Meal Journal</h3>
+        <button data-tab="log" class="tab-btn px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Add Food / Scan</span>
+        </button>
       </div>
 
       <!-- Meals Container -->
-      <div id="mealsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-
-      <!-- Quick Re-Log Recent / Custom Foods -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold text-base">Quick Add (Recent &amp; Saved Foods)</h2>
-          <select id="quickAddMeal" class="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
-            <option value="Breakfast">Breakfast</option>
-            <option value="Lunch">Lunch</option>
-            <option value="Dinner">Dinner</option>
-            <option value="Snacks">Snacks</option>
-          </select>
-        </div>
-        <div id="quickFoodsList" class="flex flex-wrap gap-2 text-xs"></div>
-      </div>
+      <div id="mealSections" class="space-y-4"></div>
     </section>
 
-    <!-- ==================== TAB 2: LOG & SCAN ==================== -->
+    <!-- TAB 2: LOG & SCAN -->
     <section id="tab-log" class="tab-panel hidden space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="font-semibold text-base">Log Food by Voice, Text, Barcode, or Label</h2>
-          <p class="text-xs text-slate-400">Powered by Gemini 3.8 Flash + Open Food Facts.</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <label for="targetMealSelect" class="text-xs text-slate-400">Meal:</label>
-          <select id="targetMealSelect" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+      <!-- AI Food & Voice Lookup -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-white">AI Food & Voice Lookup</h2>
+            <p class="text-xs text-slate-400">Type a meal, dictate with your mic, or auto-fallback to Open Food Facts during high AI demand.</p>
+          </div>
+          <select id="mealTypeSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200">
             <option value="Breakfast">Breakfast</option>
             <option value="Lunch">Lunch</option>
             <option value="Dinner">Dinner</option>
             <option value="Snacks">Snacks</option>
           </select>
         </div>
+
+        <textarea id="foodPromptInput" rows="3" placeholder="e.g., 3 scrambled eggs, 2 slices sourdough toast with 1 tbsp butter, and a protein shake with 1 scoop whey and 1 cup almond milk" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+
+        <div class="flex flex-wrap gap-2.5">
+          <button id="analyzeFoodBtn" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Lookup & Log Food</span>
+          </button>
+
+          <button id="voiceBtn" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium text-sm border border-slate-700 flex items-center gap-2">
+            <i data-lucide="mic" class="w-4 h-4 text-rose-400"></i>
+            <span id="voiceBtnLabel">Dictate Meal</span>
+          </button>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <!-- Voice & Text Dictation -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-          <div class="flex items-center justify-between gap-2">
-            <h3 class="font-semibold">Voice Dictation &amp; Natural Text</h3>
-            <button type="button" id="micToggleBtn" class="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs">
-              Start Dictating
-            </button>
-          </div>
-          <p id="micStatus" class="text-xs text-slate-400">Tap "Start Dictating" to speak your meal, or type it below.</p>
-          <textarea id="dictationText" rows="3" placeholder="Example: 3 whole eggs, 2 slices sourdough toast with 1 tbsp butter, and a scoop of vanilla whey in almond milk"
-            class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500"></textarea>
-          <button type="button" id="parseFoodBtn" class="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 font-semibold text-sm">
-            Parse Foods &amp; Compute Macros (Gemini 3.8 Flash)
+      <!-- Barcode & Nutrition Label OCR Scanner -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div>
+          <h2 class="text-lg font-bold text-white">Barcode & Nutrition Label Scanner</h2>
+          <p class="text-xs text-slate-400">Enter a UPC/EAN barcode (checks Open Food Facts first) or snap/upload a nutrition label photo for AI OCR.</p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <input id="barcodeInput" type="text" inputmode="numeric" placeholder="Enter barcode number (e.g. 049000042566)" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+          <button id="lookupBarcodeBtn" class="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-sm flex items-center justify-center gap-2">
+            <i data-lucide="barcode" class="w-4 h-4"></i>
+            <span>Lookup Barcode</span>
           </button>
         </div>
 
-        <!-- Barcode + Nutrition Label Fallback -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-          <h3 class="font-semibold">Barcode Lookup + Nutrition Label Fallback</h3>
-          <div class="flex gap-2">
-            <input id="barcodeInput" type="text" inputmode="numeric" placeholder="Enter barcode (e.g. 041190468854)"
-              class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
-            <button type="button" id="lookupBarcodeBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">
-              Lookup
-            </button>
-          </div>
-          <button type="button" id="toggleCameraBtn" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium border border-slate-700">
-            Toggle Live Camera Barcode Scan
-          </button>
-          <video id="barcodeVideo" class="w-full max-h-48 rounded-xl bg-black hidden" playsinline muted></video>
-
-          <!-- Fallback Nutrition Label Scanner -->
-          <div id="labelFallbackBox" class="pt-2 border-t border-slate-800 space-y-2">
-            <p class="text-xs text-slate-400">
-              Barcode missing or incomplete? Snap or upload a photo of the <strong>Nutrition Facts</strong> panel:
-            </p>
-            <input id="labelImageInput" type="file" accept="image/*" capture="environment"
-              class="block w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30" />
-            <button type="button" id="scanLabelBtn" class="w-full py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold text-xs">
-              Extract Nutrition from Label Photo (Gemini 3.8 Flash)
+        <div class="border-t border-slate-800 pt-4">
+          <label class="block text-xs font-medium text-slate-300 mb-2">Nutrition Label Photo (OCR Fallback)</label>
+          <div class="flex flex-wrap items-center gap-3">
+            <input id="labelPhotoInput" type="file" accept="image/*" capture="environment" class="text-xs text-slate-300 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-emerald-300 hover:file:bg-slate-700" />
+            <button id="scanLabelBtn" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs flex items-center gap-1.5">
+              <i data-lucide="scan-line" class="w-4 h-4"></i>
+              <span>Read Label Photo</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Review / Staging Area Before Saving -->
-      <div id="stagingCard" class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-4 space-y-3 hidden">
-        <div class="flex items-center justify-between">
-          <h3 class="font-semibold text-emerald-400">Review Parsed Foods Before Logging</h3>
-          <button type="button" id="clearStagingBtn" class="text-xs text-slate-400 hover:text-white">Clear</button>
+      <!-- Manual Entry -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <h2 class="text-lg font-bold text-white">Quick Manual Entry</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+          <input id="manualName" type="text" placeholder="Food name" class="sm:col-span-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+          <input id="manualCal" type="number" placeholder="Calories" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+          <input id="manualPro" type="number" placeholder="Protein (g)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+          <div class="grid grid-cols-2 gap-2">
+            <input id="manualCarb" type="number" placeholder="Carbs" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white" />
+            <input id="manualFat" type="number" placeholder="Fat" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white" />
+          </div>
         </div>
-        <div class="hidden sm:grid sm:grid-cols-6 gap-2 text-[11px] text-slate-400 px-2">
-          <span class="sm:col-span-2">Food Name</span>
-          <span>Calories</span>
-          <span>Protein (g)</span>
-          <span>Net Carbs (g)</span>
-          <span>Fat (g)</span>
-        </div>
-        <div id="stagingList" class="space-y-2"></div>
-        <button type="button" id="confirmStageBtn" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm">
-          Add All to <span id="stageMealLabel">Breakfast</span>
-        </button>
+        <button id="addManualBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700">Add Manual Item</button>
       </div>
     </section>
 
-    <!-- ==================== TAB 3: FASTING ==================== -->
+    <!-- TAB 3: FASTING -->
     <section id="tab-fasting" class="tab-panel hidden space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="font-semibold text-lg">Intermittent Fasting Timer</h2>
-            <p class="text-xs text-slate-400">Track fasting vs. eating windows alongside your daily macro targets.</p>
-          </div>
-          <select id="fastPresetSelect" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm">
-            <option value="16">16:8 (16h Fast / 8h Eat)</option>
-            <option value="18">18:6 (18h Fast / 6h Eat)</option>
-            <option value="20">20:4 (20h Fast / 4h Eat)</option>
-            <option value="23">OMAD (23h Fast / 1h Eat)</option>
+      <div class="glass-card rounded-2xl p-6 text-center space-y-4">
+        <span class="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Intermittent Fasting Timer</span>
+        <div id="fastingTimerDisplay" class="text-4xl font-extrabold tracking-wider text-white font-mono">00:00:00</div>
+        <p id="fastingSubtext" class="text-xs text-slate-400">Not currently fasting</p>
+
+        <div class="flex flex-wrap justify-center items-center gap-3 pt-2">
+          <select id="fastingProtocolSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-200">
+            <option value="16">16:8 Protocol (16h Fast)</option>
+            <option value="18">18:6 Protocol (18h Fast)</option>
+            <option value="20">20:4 Warrior (20h Fast)</option>
+            <option value="14">14:10 Gentle (14h Fast)</option>
           </select>
-        </div>
-
-        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
-          <div id="fastPhaseLabel" class="text-xs uppercase tracking-wider text-emerald-400 font-semibold">Ready to Fast</div>
-          <div id="fastCountdown" class="text-4xl font-mono font-bold">00:00:00</div>
-          <div id="fastStartedAt" class="text-xs text-slate-400"></div>
-        </div>
-
-        <div class="flex flex-wrap gap-3">
-          <button type="button" id="startFastBtn" class="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm">
-            Start Fast
-          </button>
-          <button type="button" id="endFastBtn" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-semibold text-sm">
-            End Fast / Enter Eating Window
-          </button>
+          <button id="toggleFastBtn" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">Start Fast</button>
         </div>
       </div>
     </section>
 
-    <!-- ==================== TAB 4: GOALS & API KEY ==================== -->
+    <!-- TAB 4: GOALS & API KEY -->
     <section id="tab-goals" class="tab-panel hidden space-y-5">
-      <!-- Gemini API Key & Model -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="font-semibold text-base">Gemini API Key &amp; Model</h2>
-          <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Default: gemini-3.8-flash</span>
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <h2 class="text-lg font-bold text-white">Gemini API Key & Fallback Engine</h2>
+        <p class="text-xs text-slate-400">Stored locally in your browser. Automatically retries on 503 high-demand spikes across <code class="text-emerald-300">gemini-3.8-flash</code>, <code class="text-emerald-300">gemini-3.6-flash</code>, and <code class="text-emerald-300">gemini-3.5-flash-lite</code>, with Open Food Facts backup.</p>
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <input id="apiKeyInput" type="password" placeholder="AIzaSy..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white" />
+          <button id="saveKeyBtn" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">Save Key</button>
         </div>
-        <p class="text-xs text-slate-400">Stored locally in your browser (<code class="text-slate-300">localStorage</code>) for voice food parsing and nutrition label reading.</p>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <input id="apiKeyInput" type="password" placeholder="AIza..."
-            class="sm:col-span-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
-          <input id="modelIdInput" type="text" value="gemini-3.8-flash"
-            class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-emerald-300 font-mono" />
-        </div>
-        <button type="button" id="saveApiKeyBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">
-          Save API Key &amp; Model
-        </button>
       </div>
 
-      <!-- Goal Mode & Adjustable Calories -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <h2 class="font-semibold text-base">Goal Mode &amp; Adjustable Calorie Target</h2>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button type="button" data-mode="lose" class="mode-btn py-2.5 px-3 rounded-xl border text-xs font-semibold">Lose Weight</button>
-          <button type="button" data-mode="gain" class="mode-btn py-2.5 px-3 rounded-xl border text-xs font-semibold">Gain Weight</button>
-          <button type="button" data-mode="keto" class="mode-btn py-2.5 px-3 rounded-xl border text-xs font-semibold">Keto</button>
-          <button type="button" data-mode="if" class="mode-btn py-2.5 px-3 rounded-xl border text-xs font-semibold">Intermittent Fasting</button>
-        </div>
-
-        <!-- Optional TDEE Helper -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-xs">
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <h2 class="text-lg font-bold text-white">Calorie Target & Macro Preset</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-slate-400 mb-1">Sex</label>
-            <select id="statSex" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5">
-              <option value="male">Male</option>
-              <option value="female">Female</option>
+            <label class="block text-xs text-slate-400 mb-1">Daily Calorie Target (kcal)</label>
+            <input id="calorieGoalInput" type="number" value="2200" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Goal Preset</label>
+            <select id="presetGoalSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+              <option value="Balanced">Balanced (30% P / 40% C / 30% F)</option>
+              <option value="Fat Loss / High Protein">Fat Loss / High Protein (40% P / 30% C / 30% F)</option>
+              <option value="Muscle Gain / Hypertrophy">Muscle Gain / Hypertrophy (30% P / 45% C / 25% F)</option>
+              <option value="Keto / Low Carb">Keto / Low Carb (25% P / 5% C / 70% F)</option>
             </select>
           </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Age</label>
-            <input id="statAge" type="number" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5" />
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Weight (lbs)</label>
-            <input id="statWeight" type="number" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5" />
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Height (in)</label>
-            <input id="statHeight" type="number" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5" />
-          </div>
-          <div>
-            <label class="block text-slate-400 mb-1">Activity</label>
-            <select id="statActivity" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5">
-              <option value="1.2">Sedentary</option>
-              <option value="1.375">Light</option>
-              <option value="1.55">Moderate</option>
-              <option value="1.725">Very Active</option>
-            </select>
-          </div>
-          <div class="col-span-2 sm:col-span-5 flex justify-end">
-            <button type="button" id="calcTdeeBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium">
-              Calculate Suggested Calories from Stats
-            </button>
-          </div>
         </div>
-
-        <!-- Adjustable Daily Calories Control -->
-        <div class="space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-sm font-medium">Daily Calorie Target</span>
-            <div class="flex items-center gap-2">
-              <button type="button" data-cal-delta="-100" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold">-100</button>
-              <input id="goalCalInput" type="number" step="25" min="800" max="8000"
-                class="w-24 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-right font-bold text-emerald-400" />
-              <span class="text-xs text-slate-400">kcal</span>
-              <button type="button" data-cal-delta="100" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold">+100</button>
-            </div>
-          </div>
-          <input id="goalCalSlider" type="range" min="1000" max="5000" step="25" class="w-full accent-emerald-500" />
-        </div>
-
-        <!-- Macro Targets (Auto-updated on calorie change + editable) -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="bg-slate-800/70 p-3 rounded-xl">
-            <label class="block text-xs text-slate-400 mb-1">Protein (g)</label>
-            <input id="targetProtein" type="number" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold" />
-          </div>
-          <div class="bg-slate-800/70 p-3 rounded-xl">
-            <label class="block text-xs text-slate-400 mb-1">Net Carbs Cap (g)</label>
-            <input id="targetNetCarbs" type="number" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold" />
-          </div>
-          <div class="bg-slate-800/70 p-3 rounded-xl">
-            <label class="block text-xs text-slate-400 mb-1">Total Carbs (g)</label>
-            <input id="targetTotalCarbs" type="number" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold" />
-          </div>
-          <div class="bg-slate-800/70 p-3 rounded-xl">
-            <label class="block text-xs text-slate-400 mb-1">Fat (g)</label>
-            <input id="targetFat" type="number" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold" />
-          </div>
-        </div>
-
-        <button type="button" id="saveGoalsBtn" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm">
-          Save Calorie &amp; Macro Targets
-        </button>
-      </div>
-
-      <!-- Backup / Restore -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-        <span class="text-xs text-slate-400">Export or restore your journal, custom foods, and goals as JSON.</span>
-        <div class="flex gap-2">
-          <button type="button" id="exportJsonBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium">Export JSON</button>
-          <label class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium cursor-pointer">
-            Import JSON
-            <input id="importJsonInput" type="file" accept="application/json" class="hidden" />
-          </label>
-        </div>
+        <button id="saveGoalsBtn" class="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-sm">Update Calorie & Macro Targets</button>
       </div>
     </section>
   </main>
 
-  <!-- Mobile Bottom Bar -->
-  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 grid grid-cols-4 py-2 z-30">
-    <button type="button" data-tab="today" class="mob-btn flex flex-col items-center py-1 text-xs font-medium text-emerald-400">Today</button>
-    <button type="button" data-tab="log" class="mob-btn flex flex-col items-center py-1 text-xs font-medium text-slate-400">Log &amp; Scan</button>
-    <button type="button" data-tab="fasting" class="mob-btn flex flex-col items-center py-1 text-xs font-medium text-slate-400">Fasting</button>
-    <button type="button" data-tab="goals" class="mob-btn flex flex-col items-center py-1 text-xs font-medium text-slate-400">Goals</button>
-  </nav>
-
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-20 md:bottom-6 right-4 bg-slate-800 border border-slate-600 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg hidden z-50"></div>
-
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const STORAGE_KEY = 'macroflow_state_v2';
-      const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
-      const DEFAULT_MODEL = 'gemini-3.8-flash';
+    const GEMINI_MODELS = [
+      "gemini-3.8-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite"
+    ];
 
-      const defaultState = () => ({
-        apiKey: '',
-        modelId: DEFAULT_MODEL,
-        selectedDate: new Date().toISOString().slice(0, 10),
-        goalMode: 'lose',
-        stats: { sex: 'male', age: 43, weightLbs: 195, heightIn: 71, activity: 1.55 },
-        targets: { calories: 2100, protein: 175, netCarbs: 150, totalCarbs: 180, fat: 70 },
-        logsByDate: {},
-        savedFoods: [
-          { name: '3 Whole Eggs', serving: '3 large', calories: 216, protein: 19, totalCarbs: 1.5, fiber: 0, netCarbs: 1.5, fat: 15 },
-          { name: 'Chicken Breast (6 oz)', serving: '170g', calories: 280, protein: 52, totalCarbs: 0, fiber: 0, netCarbs: 0, fat: 6 },
-          { name: 'Avocado (Half)', serving: '75g', calories: 120, protein: 1.5, totalCarbs: 6, fiber: 5, netCarbs: 1, fat: 11 }
-        ],
-        fasting: { active: false, startTime: null, hours: 16 }
-      });
+    const PRESET_RATIOS = {
+      "Balanced": { p: 0.30, c: 0.40, f: 0.30 },
+      "Fat Loss / High Protein": { p: 0.40, c: 0.30, f: 0.30 },
+      "Muscle Gain / Hypertrophy": { p: 0.30, c: 0.45, f: 0.25 },
+      "Keto / Low Carb": { p: 0.25, c: 0.05, f: 0.70 }
+    };
 
-      let state = loadState();
-      let stagedItems = [];
-      let cameraStream = null;
-      let recognition = null;
-      let mediaRecorder = null;
-      let audioChunks = [];
-      let isRecording = false;
-      let toastTimer = null;
+    const STORAGE_KEY = "macroflow_state_v2";
+    const todayISO = () => new Date().toISOString().slice(0, 10);
 
-      function loadState() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('macroflow_state_v1');
-          if (!raw) return defaultState();
-          const parsed = JSON.parse(raw);
-          return {
-            ...defaultState(),
-            ...parsed,
-            modelId: parsed.modelId && parsed.modelId !== 'gemini-2.5-flash' ? parsed.modelId : DEFAULT_MODEL,
-            targets: { ...defaultState().targets, ...(parsed.targets || {}) },
-            stats: { ...defaultState().stats, ...(parsed.stats || {}) },
-            fasting: { ...defaultState().fasting, ...(parsed.fasting || {}) }
-          };
-        } catch {
-          return defaultState();
-        }
-      }
+    let state = loadState();
+    let activeDate = todayISO();
+    let mediaRecorder = null;
+    let audioChunks = [];
 
-      function saveState() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      }
-
-      function showToast(msg) {
-        const el = document.getElementById('toast');
-        el.textContent = msg;
-        el.classList.remove('hidden');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
-      }
-
-      function escapeHtml(str) {
-        return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-      }
-
-      function computeMacrosForCalories(calories, mode, currentNetCap = 25) {
-        const cal = Math.max(800, Number(calories) || 2000);
-        if (mode === 'keto') {
-          const netCarbs = Math.min(50, Math.max(15, Number(currentNetCap) || 25));
-          const protein = Math.round((cal * 0.25) / 4);
-          const fat = Math.max(20, Math.round((cal - protein * 4 - netCarbs * 4) / 9));
-          return { calories: cal, protein, netCarbs, totalCarbs: netCarbs + 5, fat };
-        }
-        if (mode === 'gain') {
-          const protein = Math.round((cal * 0.28) / 4);
-          const fat = Math.round((cal * 0.27) / 9);
-          const totalCarbs = Math.max(20, Math.round((cal - protein * 4 - fat * 9) / 4));
-          return { calories: cal, protein, netCarbs: Math.max(15, totalCarbs - 25), totalCarbs, fat };
-        }
-        const protein = Math.round((cal * 0.34) / 4);
-        const fat = Math.round((cal * 0.30) / 9);
-        const totalCarbs = Math.max(20, Math.round((cal - protein * 4 - fat * 9) / 4));
-        return { calories: cal, protein, netCarbs: Math.max(15, totalCarbs - 25), totalCarbs, fat };
-      }
-
-      function adjustCalories(delta) {
-        const nextCal = Math.max(800, Math.min(8000, (Number(state.targets.calories) || 2000) + delta));
-        state.targets = computeMacrosForCalories(nextCal, state.goalMode, state.targets.netCarbs);
-        saveState();
-        syncUI();
-        showToast(`Target updated to ${nextCal} kcal`);
-      }
-
-      function switchTab(tabName) {
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-        const activePanel = document.getElementById(`tab-${tabName}`);
-        if (activePanel) activePanel.classList.remove('hidden');
-
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-          const active = btn.dataset.tab === tabName;
-          btn.className = `nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium ${active ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white'}`;
-        });
-        document.querySelectorAll('.mob-btn').forEach(btn => {
-          const active = btn.dataset.tab === tabName;
-          btn.className = `mob-btn flex flex-col items-center py-1 text-xs font-medium ${active ? 'text-emerald-400' : 'text-slate-400'}`;
-        });
-      }
-
-      function getDayEntries(dateStr = state.selectedDate) {
-        if (!state.logsByDate[dateStr]) {
-          state.logsByDate[dateStr] = { Breakfast: [], Lunch: [], Dinner: [], Snacks: [] };
-        }
-        return state.logsByDate[dateStr];
-      }
-
-      function renderToday() {
-        document.getElementById('journalDate').value = state.selectedDate;
-        document.getElementById('quickCalInput').value = state.targets.calories;
-        document.getElementById('apiKeyBanner').classList.toggle('hidden', Boolean(state.apiKey));
-
-        const modeNames = { lose: 'Lose Weight', gain: 'Gain Weight', keto: 'Keto', if: 'Intermittent Fasting' };
-        document.getElementById('headerSubtitle').textContent = `${modeNames[state.goalMode] || 'Custom'} • ${state.targets.calories} kcal`;
-
-        const day = getDayEntries();
-        const totals = { calories: 0, protein: 0, netCarbs: 0, totalCarbs: 0, fat: 0 };
-        MEALS.forEach(m => {
-          (day[m] || []).forEach(item => {
-            totals.calories += Number(item.calories) || 0;
-            totals.protein += Number(item.protein) || 0;
-            totals.netCarbs += Number(item.netCarbs) || 0;
-            totals.totalCarbs += Number(item.totalCarbs) || 0;
-            totals.fat += Number(item.fat) || 0;
-          });
-        });
-
-        const cards = [
-          { label: 'Calories', val: Math.round(totals.calories), target: state.targets.calories, unit: 'kcal' },
-          { label: 'Protein', val: Math.round(totals.protein), target: state.targets.protein, unit: 'g' },
-          { label: state.goalMode === 'keto' ? 'Net Carbs (Focus)' : 'Net Carbs', val: Math.round(totals.netCarbs), target: state.targets.netCarbs, unit: 'g' },
-          { label: 'Total Carbs', val: Math.round(totals.totalCarbs), target: state.targets.totalCarbs, unit: 'g' },
-          { label: 'Fat', val: Math.round(totals.fat), target: state.targets.fat, unit: 'g' }
-        ];
-
-        document.getElementById('macroSummaryGrid').innerHTML = cards.map(c => {
-          const pct = Math.min(100, Math.round((c.val / Math.max(1, c.target)) * 100));
-          return `
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
-              <div class="flex justify-between text-xs text-slate-400 mb-1">
-                <span>${c.label}</span>
-                <span>${pct}%</span>
-              </div>
-              <div class="text-base font-bold">${c.val} <span class="text-xs font-normal text-slate-400">/ ${c.target}${c.unit}</span></div>
-              <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
-                <div class="bar-fill h-full bg-emerald-500" style="width:${pct}%"></div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        document.getElementById('mealsContainer').innerHTML = MEALS.map(meal => {
-          const items = day[meal] || [];
-          const mealCals = Math.round(items.reduce((s, i) => s + (Number(i.calories) || 0), 0));
-          return `
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h3 class="font-semibold">${meal}</h3>
-                <span class="text-xs font-semibold text-emerald-400">${mealCals} kcal</span>
-              </div>
-              ${items.length === 0 ? `<p class="text-xs text-slate-500 py-2">No items logged yet.</p>` : items.map((item, idx) => `
-                <div class="flex items-center justify-between gap-2 bg-slate-950/80 border border-slate-800/80 rounded-xl p-2.5 text-xs">
-                  <div>
-                    <div class="font-medium text-slate-100">${escapeHtml(item.name)}</div>
-                    <div class="text-slate-400">${escapeHtml(item.serving || '1 serving')} • ${Math.round(item.calories)} kcal • P ${Math.round(item.protein)}g • NC ${Math.round(item.netCarbs)}g • F ${Math.round(item.fat)}g</div>
-                  </div>
-                  <button type="button" data-delete-meal="${meal}" data-delete-idx="${idx}" class="px-2 py-1 rounded bg-slate-800 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400">✕</button>
-                </div>
-              `).join('')}
-            </div>
-          `;
-        }).join('');
-
-        document.getElementById('quickFoodsList').innerHTML = state.savedFoods.slice(0, 12).map((f, i) => `
-          <button type="button" data-quick-idx="${i}" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left">
-            <span class="font-medium text-slate-100">${escapeHtml(f.name)}</span>
-            <span class="text-emerald-400 ml-1">${Math.round(f.calories)} kcal</span>
-          </button>
-        `).join('');
-      }
-
-      function renderStaging() {
-        const card = document.getElementById('stagingCard');
-        const meal = document.getElementById('targetMealSelect').value;
-        document.getElementById('stageMealLabel').textContent = meal;
-        if (!stagedItems.length) {
-          card.classList.add('hidden');
-          return;
-        }
-        card.classList.remove('hidden');
-        document.getElementById('stagingList').innerHTML = stagedItems.map((it, i) => `
-          <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs items-center">
-            <input type="text" data-stage-idx="${i}" data-stage-field="name" value="${escapeHtml(it.name)}" class="sm:col-span-2 bg-slate-800 rounded px-2 py-1" />
-            <input type="number" data-stage-idx="${i}" data-stage-field="calories" value="${Math.round(it.calories)}" placeholder="kcal" class="bg-slate-800 rounded px-2 py-1" />
-            <input type="number" data-stage-idx="${i}" data-stage-field="protein" value="${Math.round(it.protein)}" placeholder="P" class="bg-slate-800 rounded px-2 py-1" />
-            <input type="number" data-stage-idx="${i}" data-stage-field="netCarbs" value="${Math.round(it.netCarbs)}" placeholder="Net C" class="bg-slate-800 rounded px-2 py-1" />
-            <input type="number" data-stage-idx="${i}" data-stage-field="fat" value="${Math.round(it.fat)}" placeholder="Fat" class="bg-slate-800 rounded px-2 py-1" />
-          </div>
-        `).join('');
-      }
-
-      async function callGemini(parts, responseSchema) {
-        if (!state.apiKey) {
-          throw new Error('Please add your Gemini API key in Goals & Key first.');
-        }
-        const model = (state.modelId || DEFAULT_MODEL).trim();
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(state.apiKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseSchema
-            }
-          })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const msg = data?.error?.message || `Gemini API error (${res.status})`;
-          throw new Error(msg);
-        }
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
-        return JSON.parse(cleaned);
-      }
-
-      const foodArraySchema = {
-        type: 'ARRAY',
-        items: {
-          type: 'OBJECT',
-          properties: {
-            name: { type: 'STRING' },
-            serving: { type: 'STRING' },
-            calories: { type: 'NUMBER' },
-            protein: { type: 'NUMBER' },
-            totalCarbs: { type: 'NUMBER' },
-            fiber: { type: 'NUMBER' },
-            netCarbs: { type: 'NUMBER' },
-            fat: { type: 'NUMBER' }
-          },
-          required: ['name', 'calories', 'protein', 'totalCarbs', 'netCarbs', 'fat']
-        }
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved) return saved;
+      } catch (e) {}
+      return {
+        apiKey: "",
+        goalName: "Balanced",
+        calories: 2200,
+        protein: 165,
+        carbs: 220,
+        fat: 73,
+        logs: {},
+        fasting: { active: false, startTime: null, targetHours: 16 }
       };
+    }
 
-      // Dual-mode Voice Dictation: Live Web Speech API with MediaRecorder + Gemini 3.8 Flash Audio Fallback
-      const micBtn = document.getElementById('micToggleBtn');
-      const micStatus = document.getElementById('micStatus');
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
 
-      function setMicButtonState(recording) {
-        isRecording = recording;
-        micBtn.textContent = recording ? 'Stop Dictating' : 'Start Dictating';
-        micBtn.className = recording
-          ? 'px-3.5 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-semibold text-xs animate-pulse'
-          : 'px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs';
+    function showBanner(msg, type = "info") {
+      const banner = document.getElementById("statusBanner");
+      const text = document.getElementById("statusText");
+      banner.className = "rounded-xl px-4 py-3 text-sm border flex items-start justify-between gap-3";
+      if (type === "error") {
+        banner.classList.add("bg-rose-950/80", "border-rose-500/40", "text-rose-200");
+      } else if (type === "warn") {
+        banner.classList.add("bg-amber-950/80", "border-amber-500/40", "text-amber-200");
+      } else {
+        banner.classList.add("bg-emerald-950/80", "border-emerald-500/40", "text-emerald-200");
       }
+      text.textContent = msg;
+      banner.classList.remove("hidden");
+    }
 
-      micBtn.addEventListener('click', async () => {
-        if (isRecording) {
-          if (recognition) {
-            try { recognition.stop(); } catch {}
-          }
-          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-          }
-          setMicButtonState(false);
-          return;
-        }
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    async function callGeminiWithRetryAndFallback({ apiKey, contents, generationConfig, onStatus }) {
+      let lastError;
 
-        // Try Web Speech API first when supported
-        if (SpeechRec) {
+      for (let mIndex = 0; mIndex < GEMINI_MODELS.length; mIndex++) {
+        const model = GEMINI_MODELS[mIndex];
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+        for (let attempt = 0; attempt < 3; attempt++) {
           try {
-            let finalTranscript = document.getElementById('dictationText').value.trim();
-            if (finalTranscript) finalTranscript += ' ';
-            recognition = new SpeechRec();
-            recognition.lang = 'en-US';
-            recognition.continuous = true;
-            recognition.interimResults = true;
-
-            recognition.onstart = () => {
-              setMicButtonState(true);
-              micStatus.textContent = 'Listening... speak your foods, then tap "Stop Dictating".';
-            };
-
-            recognition.onresult = (e) => {
-              let interim = '';
-              for (let i = e.resultIndex; i < e.results.length; i++) {
-                const t = e.results[i][0].transcript;
-                if (e.results[i].isFinal) {
-                  finalTranscript += t + ' ';
-                } else {
-                  interim += t;
-                }
-              }
-              document.getElementById('dictationText').value = (finalTranscript + interim).trim();
-            };
-
-            recognition.onerror = (e) => {
-              setMicButtonState(false);
-              if (e.error === 'not-allowed') {
-                micStatus.textContent = 'Microphone permission blocked. Allow mic access in browser settings or type below.';
-              } else {
-                micStatus.textContent = 'Switching to direct audio recording...';
-                startAudioRecorderFallback();
-              }
-            };
-
-            recognition.onend = () => {
-              setMicButtonState(false);
-              micStatus.textContent = 'Dictation stopped. Tap "Parse Foods & Compute Macros" below.';
-            };
-
-            recognition.start();
-            return;
-          } catch {
-            // Fall through to MediaRecorder
-          }
-        }
-
-        await startAudioRecorderFallback();
-      });
-
-      async function startAudioRecorderFallback() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          micStatus.textContent = 'Microphone unavailable in this browser—type your foods below.';
-          return showToast('Microphone not available in this browser.');
-        }
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioChunks = [];
-          const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-          mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) audioChunks.push(e.data);
-          };
-
-          mediaRecorder.onstop = async () => {
-            stream.getTracks().forEach(t => t.stop());
-            setMicButtonState(false);
-            if (!audioChunks.length) return;
-            const blob = new Blob(audioChunks, { type: mimeType });
-            micStatus.textContent = 'Transcribing & parsing audio with Gemini 3.8 Flash...';
-            try {
-              const base64Audio = await new Promise((resolve, reject) => {
-                const r = new FileReader();
-                r.onload = () => resolve(r.result.split(',')[1]);
-                r.onerror = reject;
-                r.readAsDataURL(blob);
-              });
-              const items = await callGemini([
-                { inlineData: { mimeType, data: base64Audio } },
-                { text: 'Listen to this spoken meal log. Break down every food item mentioned with realistic portion estimates, calories, protein, totalCarbs, fiber, netCarbs (totalCarbs - fiber), and fat.' }
-              ], foodArraySchema);
-              stagedItems = Array.isArray(items) ? items : [];
-              renderStaging();
-              micStatus.textContent = 'Audio parsed! Review items below.';
-              showToast('Spoken meal parsed!');
-            } catch (err) {
-              micStatus.textContent = err.message;
-              showToast(err.message);
+            if (attempt > 0 || mIndex > 0) {
+              onStatus?.(`High demand detected — retrying with ${model} (attempt ${attempt + 1}/3)...`);
             }
-          };
 
-          mediaRecorder.start();
-          setMicButtonState(true);
-          micStatus.textContent = 'Recording audio... tap "Stop Dictating" when finished.';
-        } catch {
-          setMicButtonState(false);
-          micStatus.textContent = 'Microphone permission denied. Enable mic in browser settings or type below.';
-          showToast('Microphone permission denied.');
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents, generationConfig })
+            });
+
+            if (res.ok) {
+              return await res.json();
+            }
+
+            const errData = await res.json().catch(() => ({}));
+            const message = errData?.error?.message || `HTTP ${res.status}`;
+            const isTransient = res.status === 503 || res.status === 429 || res.status === 500;
+            lastError = new Error(`${model}: ${message}`);
+
+            if (!isTransient || attempt === 2) {
+              break;
+            }
+
+            const delay = Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 400);
+            await sleep(delay);
+          } catch (networkErr) {
+            lastError = networkErr;
+            if (attempt === 2) break;
+            const delay = Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 400);
+            await sleep(delay);
+          }
         }
       }
 
-      // Parse Text / Dictation with Gemini 3.8 Flash
-      document.getElementById('parseFoodBtn').addEventListener('click', async () => {
-        const text = document.getElementById('dictationText').value.trim();
-        if (!text) return showToast('Enter or dictate a meal first.');
-        const btn = document.getElementById('parseFoodBtn');
-        const origLabel = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Parsing with Gemini 3.8 Flash...';
-        try {
-          const items = await callGemini([
-            { text: `Break down this food log into individual items with realistic nutrition estimates and net carbs (totalCarbs - fiber): "${text}"` }
-          ], foodArraySchema);
-          stagedItems = Array.isArray(items) ? items : [];
-          renderStaging();
-          showToast('Ready to review!');
-        } catch (err) {
-          showToast(err.message);
-        } finally {
-          btn.disabled = false;
-          btn.textContent = origLabel;
-        }
-      });
+      throw lastError || new Error("All Gemini models are currently experiencing high demand.");
+    }
 
-      // Barcode Lookup via Open Food Facts
-      document.getElementById('lookupBarcodeBtn').addEventListener('click', async () => {
-        const code = document.getElementById('barcodeInput').value.trim();
-        if (!code) return showToast('Enter a barcode number.');
-        try {
-          showToast('Checking Open Food Facts...');
-          const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json`);
-          const json = await res.json();
-          const p = json.product;
-          const n = p?.nutriments || {};
-          const kcal = n['energy-kcal_serving'] ?? n['energy-kcal_100g'];
-          if (json.status !== 1 || kcal == null) {
-            showToast('Barcode not in database—scan the Nutrition Facts label below.');
+    async function lookupOpenFoodFacts({ barcode, foodQuery }) {
+      if (barcode) {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.status !== 1 || !data.product) return null;
+        const n = data.product.nutriments || {};
+        return [{
+          name: data.product.product_name || `Barcode ${barcode}`,
+          calories: Math.round(n["energy-kcal_serving"] ?? n["energy-kcal_100g"] ?? 0),
+          protein: Math.round(n.proteins_serving ?? n.proteins_100g ?? 0),
+          carbs: Math.round(n.carbohydrates_serving ?? n.carbohydrates_100g ?? 0),
+          fat: Math.round(n.fat_serving ?? n.fat_100g ?? 0)
+        }];
+      }
+
+      if (foodQuery) {
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(foodQuery)}&search_simple=1&action=process&json=1&page_size=1`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        const item = data.products?.[0];
+        if (!item) return null;
+        const n = item.nutriments || {};
+        return [{
+          name: `${item.product_name || foodQuery} (Open Food Facts 100g)`,
+          calories: Math.round(n["energy-kcal_100g"] ?? 0),
+          protein: Math.round(n.proteins_100g ?? 0),
+          carbs: Math.round(n.carbohydrates_100g ?? 0),
+          fat: Math.round(n.fat_100g ?? 0)
+        }];
+      }
+
+      return null;
+    }
+
+    function addFoodItems(items, mealType) {
+      if (!state.logs[activeDate]) state.logs[activeDate] = [];
+      items.forEach((item) => {
+        state.logs[activeDate].push({
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+          meal: mealType,
+          name: item.name || "Logged Food",
+          calories: Number(item.calories) || 0,
+          protein: Number(item.protein) || 0,
+          carbs: Number(item.carbs) || 0,
+          fat: Number(item.fat) || 0
+        });
+      });
+      saveState();
+      renderDashboard();
+    }
+
+    async function handleAnalyzeFood() {
+      const promptText = document.getElementById("foodPromptInput").value.trim();
+      const mealType = document.getElementById("mealTypeSelect").value;
+      if (!promptText) {
+        showBanner("Enter or dictate a food description first.", "warn");
+        return;
+      }
+
+      const btn = document.getElementById("analyzeFoodBtn");
+      btn.disabled = true;
+      showBanner("Looking up nutrition info...", "info");
+
+      try {
+        if (!state.apiKey) {
+          const fallbackItems = await lookupOpenFoodFacts({ foodQuery: promptText });
+          if (fallbackItems) {
+            addFoodItems(fallbackItems, mealType);
+            document.getElementById("foodPromptInput").value = "";
+            showBanner(`Added "${fallbackItems[0].name}" via Open Food Facts (no Gemini key set).`, "info");
+            switchTab("today");
             return;
           }
-          const protein = Number(n.proteins_serving ?? n.proteins_100g ?? 0);
-          const totalCarbs = Number(n.carbohydrates_serving ?? n.carbohydrates_100g ?? 0);
-          const fiber = Number(n.fiber_serving ?? n.fiber_100g ?? 0);
-          const fat = Number(n.fat_serving ?? n.fat_100g ?? 0);
-          stagedItems = [{
-            name: p.product_name || `Product ${code}`,
-            serving: p.serving_size || '100g',
-            calories: Number(kcal),
-            protein,
-            totalCarbs,
-            fiber,
-            netCarbs: Math.max(0, totalCarbs - fiber),
-            fat
-          }];
-          renderStaging();
-          showToast('Product loaded—review below!');
-        } catch {
-          showToast('Barcode lookup failed—try Nutrition Label photo fallback.');
+          throw new Error("Add your Gemini API key in Goals & Key to parse natural-language meals.");
         }
-      });
 
-      // Optional Camera View for Barcode
-      document.getElementById('toggleCameraBtn').addEventListener('click', async () => {
-        const video = document.getElementById('barcodeVideo');
-        if (cameraStream) {
-          cameraStream.getTracks().forEach(t => t.stop());
-          cameraStream = null;
-          video.classList.add('hidden');
-          return;
-        }
-        try {
-          cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          video.srcObject = cameraStream;
-          video.classList.remove('hidden');
-          await video.play();
-          if ('BarcodeDetector' in window) {
-            const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
-            const scanLoop = async () => {
-              if (!cameraStream) return;
-              try {
-                const codes = await detector.detect(video);
-                if (codes.length) {
-                  document.getElementById('barcodeInput').value = codes[0].rawValue;
-                  cameraStream.getTracks().forEach(t => t.stop());
-                  cameraStream = null;
-                  video.classList.add('hidden');
-                  document.getElementById('lookupBarcodeBtn').click();
-                  return;
-                }
-              } catch {}
-              requestAnimationFrame(scanLoop);
-            };
-            requestAnimationFrame(scanLoop);
-          } else {
-            showToast('Live barcode auto-detect not supported in this browser—type barcode or snap label below.');
+        const data = await callGeminiWithRetryAndFallback({
+          apiKey: state.apiKey,
+          onStatus: (msg) => showBanner(msg, "warn"),
+          contents: [{
+            parts: [{
+              text: `Extract every food item and estimate accurate calories, protein (g), carbs (g), and fat (g). Return strictly valid JSON with schema {"items":[{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number}]}. Meal: ${promptText}`
+            }]
+          }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.2
           }
-        } catch {
-          showToast('Camera unavailable—enter barcode or upload label photo.');
-        }
-      });
-
-      // Nutrition Label OCR Fallback via Gemini 3.8 Flash Vision
-      document.getElementById('scanLabelBtn').addEventListener('click', async () => {
-        const file = document.getElementById('labelImageInput').files?.[0];
-        if (!file) return showToast('Choose or snap a Nutrition Facts photo first.');
-        const btn = document.getElementById('scanLabelBtn');
-        const origLabel = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Reading Label with Gemini 3.8 Flash...';
-        try {
-          const base64 = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          const schema = {
-            type: 'OBJECT',
-            properties: {
-              name: { type: 'STRING' },
-              serving: { type: 'STRING' },
-              calories: { type: 'NUMBER' },
-              protein: { type: 'NUMBER' },
-              totalCarbs: { type: 'NUMBER' },
-              fiber: { type: 'NUMBER' },
-              netCarbs: { type: 'NUMBER' },
-              fat: { type: 'NUMBER' }
-            },
-            required: ['name', 'calories', 'protein', 'totalCarbs', 'netCarbs', 'fat']
-          };
-          const item = await callGemini([
-            { inlineData: { mimeType: file.type || 'image/jpeg', data: base64 } },
-            { text: 'Extract nutrition facts per serving from this Nutrition Facts label. Calculate netCarbs as totalCarbs minus fiber.' }
-          ], schema);
-          stagedItems = [item];
-          renderStaging();
-          showToast('Label extracted—review and add!');
-        } catch (err) {
-          showToast(err.message);
-        } finally {
-          btn.disabled = false;
-          btn.textContent = origLabel;
-        }
-      });
-
-      // Confirm Staged Items
-      document.getElementById('confirmStageBtn').addEventListener('click', () => {
-        const meal = document.getElementById('targetMealSelect').value;
-        const day = getDayEntries();
-        stagedItems.forEach(it => {
-          const clean = {
-            name: it.name || 'Food Item',
-            serving: it.serving || '1 serving',
-            calories: Number(it.calories) || 0,
-            protein: Number(it.protein) || 0,
-            totalCarbs: Number(it.totalCarbs) || 0,
-            fiber: Number(it.fiber) || 0,
-            netCarbs: Number(it.netCarbs) ?? Math.max(0, (Number(it.totalCarbs) || 0) - (Number(it.fiber) || 0)),
-            fat: Number(it.fat) || 0
-          };
-          day[meal].push(clean);
-          state.savedFoods.unshift(clean);
         });
-        state.savedFoods = state.savedFoods.slice(0, 30);
-        stagedItems = [];
+
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        const parsed = JSON.parse(rawText);
+        if (!parsed.items?.length) throw new Error("No food items detected.");
+
+        addFoodItems(parsed.items, mealType);
+        document.getElementById("foodPromptInput").value = "";
+        showBanner(`Logged ${parsed.items.length} item(s) to ${mealType}.`, "info");
+        switchTab("today");
+      } catch (err) {
+        const offFallback = await lookupOpenFoodFacts({ foodQuery: promptText }).catch(() => null);
+        if (offFallback) {
+          addFoodItems(offFallback, mealType);
+          document.getElementById("foodPromptInput").value = "";
+          showBanner(`Gemini hit high demand, so "${offFallback[0].name}" was logged via Open Food Facts.`, "warn");
+          switchTab("today");
+        } else {
+          showBanner(`Lookup failed: ${err.message}`, "error");
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function handleBarcodeLookup() {
+      const barcode = document.getElementById("barcodeInput").value.trim();
+      const mealType = document.getElementById("mealTypeSelect").value;
+      if (!barcode) {
+        showBanner("Enter a barcode number first.", "warn");
+        return;
+      }
+
+      showBanner(`Searching Open Food Facts for barcode ${barcode}...`, "info");
+      const items = await lookupOpenFoodFacts({ barcode }).catch(() => null);
+      if (items && items.length) {
+        addFoodItems(items, mealType);
+        document.getElementById("barcodeInput").value = "";
+        showBanner(`Logged "${items[0].name}" to ${mealType}.`, "info");
+        switchTab("today");
+      } else {
+        showBanner("Barcode not found in Open Food Facts. Snap a photo of the nutrition label below for AI OCR.", "warn");
+      }
+    }
+
+    async function handleLabelScan() {
+      const file = document.getElementById("labelPhotoInput").files?.[0];
+      const mealType = document.getElementById("mealTypeSelect").value;
+      if (!file) {
+        showBanner("Select or capture a nutrition label photo first.", "warn");
+        return;
+      }
+      if (!state.apiKey) {
+        showBanner("Add your Gemini API key in Goals & Key to scan nutrition labels.", "error");
+        return;
+      }
+
+      showBanner("Scanning nutrition label with AI OCR...", "info");
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const data = await callGeminiWithRetryAndFallback({
+          apiKey: state.apiKey,
+          onStatus: (msg) => showBanner(msg, "warn"),
+          contents: [{
+            parts: [
+              { text: 'Read this nutrition facts label for 1 serving and return JSON: {"items":[{"name":"Product Name","calories":number,"protein":number,"carbs":number,"fat":number}]}' },
+              { inlineData: { mimeType: file.type || "image/jpeg", data: base64 } }
+            ]
+          }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+        });
+
+        const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+        if (!parsed.items?.length) throw new Error("Could not extract macros from image.");
+        addFoodItems(parsed.items, mealType);
+        showBanner(`Scanned and logged "${parsed.items[0].name}" to ${mealType}.`, "info");
+        switchTab("today");
+      } catch (err) {
+        showBanner(`Label scan failed: ${err.message}`, "error");
+      }
+    }
+
+    function handleVoiceInput() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const label = document.getElementById("voiceBtnLabel");
+
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        label.textContent = "Listening...";
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          const box = document.getElementById("foodPromptInput");
+          box.value = box.value ? `${box.value}, ${transcript}` : transcript;
+          label.textContent = "Dictate Meal";
+        };
+        recognition.onerror = () => {
+          label.textContent = "Dictate Meal";
+          showBanner("Voice recognition stopped. Check microphone permissions.", "warn");
+        };
+        recognition.onend = () => { label.textContent = "Dictate Meal"; };
+        recognition.start();
+      } else {
+        showBanner("Browser speech dictation isn't supported here—type your meal in the box.", "warn");
+      }
+    }
+
+    function renderDashboard() {
+      const entries = state.logs[activeDate] || [];
+      const totals = entries.reduce((acc, item) => {
+        acc.calories += item.calories;
+        acc.protein += item.protein;
+        acc.carbs += item.carbs;
+        acc.fat += item.fat;
+        return acc;
+      }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+
+      document.getElementById("activeGoalBadge").textContent = `Goal: ${state.goalName}`;
+      document.getElementById("calConsumed").textContent = Math.round(totals.calories);
+      document.getElementById("calTargetDisplay").textContent = state.calories;
+
+      const rem = state.calories - Math.round(totals.calories);
+      const remEl = document.getElementById("calRemaining");
+      remEl.textContent = rem >= 0 ? `${rem} kcal remaining` : `${Math.abs(rem)} kcal over target`;
+      remEl.className = rem >= 0 ? "text-xs text-emerald-400 font-medium" : "text-xs text-rose-400 font-medium";
+
+      document.getElementById("calProgressBar").style.width = `${Math.min(100, (totals.calories / Math.max(1, state.calories)) * 100)}%`;
+
+      document.getElementById("proConsumed").textContent = Math.round(totals.protein);
+      document.getElementById("proTargetDisplay").textContent = state.protein;
+      document.getElementById("proProgressBar").style.width = `${Math.min(100, (totals.protein / Math.max(1, state.protein)) * 100)}%`;
+
+      document.getElementById("carbConsumed").textContent = Math.round(totals.carbs);
+      document.getElementById("carbTargetDisplay").textContent = state.carbs;
+      document.getElementById("carbProgressBar").style.width = `${Math.min(100, (totals.carbs / Math.max(1, state.carbs)) * 100)}%`;
+
+      document.getElementById("fatConsumed").textContent = Math.round(totals.fat);
+      document.getElementById("fatTargetDisplay").textContent = state.fat;
+      document.getElementById("fatProgressBar").style.width = `${Math.min(100, (totals.fat / Math.max(1, state.fat)) * 100)}%`;
+
+      const container = document.getElementById("mealSections");
+      container.innerHTML = "";
+      ["Breakfast", "Lunch", "Dinner", "Snacks"].forEach((meal) => {
+        const mealItems = entries.filter((i) => i.meal === meal);
+        const mealCals = mealItems.reduce((s, i) => s + i.calories, 0);
+
+        const card = document.createElement("div");
+        card.className = "glass-card rounded-2xl p-4";
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-semibold text-white text-sm">${meal}</h4>
+            <span class="text-xs text-slate-400">${Math.round(mealCals)} kcal</span>
+          </div>
+          ${mealItems.length === 0 ? `<p class="text-xs text-slate-500">No items logged</p>` : `
+            <ul class="divide-y divide-slate-800">
+              ${mealItems.map((item) => `
+                <li class="py-2 flex items-center justify-between gap-2 text-xs">
+                  <div>
+                    <div class="text-slate-200 font-medium">${item.name}</div>
+                    <div class="text-slate-400">${Math.round(item.calories)} kcal · ${Math.round(item.protein)}g P · ${Math.round(item.carbs)}g C · ${Math.round(item.fat)}g F</div>
+                  </div>
+                  <button data-delete-id="${item.id}" class="text-slate-500 hover:text-rose-400 px-2 py-1">Delete</button>
+                </li>
+              `).join("")}
+            </ul>
+          `}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+      document.getElementById(`tab-${tabName}`)?.classList.remove("hidden");
+
+      document.querySelectorAll("nav .tab-btn").forEach((btn) => {
+        const isTarget = btn.dataset.tab === tabName;
+        btn.className = isTarget
+          ? "tab-btn active px-3.5 py-1.5 rounded-lg text-sm font-medium bg-emerald-500 text-slate-950"
+          : "tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800";
+      });
+    }
+
+    function updateFastingUI() {
+      const display = document.getElementById("fastingTimerDisplay");
+      const sub = document.getElementById("fastingSubtext");
+      const btn = document.getElementById("toggleFastBtn");
+
+      if (!state.fasting.active || !state.fasting.startTime) {
+        display.textContent = "00:00:00";
+        sub.textContent = "Not currently fasting";
+        btn.textContent = "Start Fast";
+        btn.className = "px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm";
+        return;
+      }
+
+      const elapsedMs = Date.now() - state.fasting.startTime;
+      const hrs = Math.floor(elapsedMs / 3600000);
+      const mins = Math.floor((elapsedMs % 3600000) / 60000);
+      const secs = Math.floor((elapsedMs % 60000) / 1000);
+      display.textContent = [hrs, mins, secs].map((n) => String(n).padStart(2, "0")).join(":");
+      sub.textContent = `Target: ${state.fasting.targetHours}h fast · Started ${new Date(state.fasting.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      btn.textContent = "End Fast";
+      btn.className = "px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-semibold text-sm";
+    }
+
+    document.addEventListener("click", (e) => {
+      const tabBtn = e.target.closest(".tab-btn");
+      if (tabBtn?.dataset.tab) switchTab(tabBtn.dataset.tab);
+
+      const delBtn = e.target.closest("[data-delete-id]");
+      if (delBtn) {
+        const id = delBtn.dataset.deleteId;
+        state.logs[activeDate] = (state.logs[activeDate] || []).filter((i) => i.id !== id);
         saveState();
-        renderStaging();
-        renderToday();
-        switchTab('today');
-        showToast(`Logged to ${meal}`);
-      });
+        renderDashboard();
+      }
+    });
 
-      document.getElementById('clearStagingBtn').addEventListener('click', () => {
-        stagedItems = [];
-        renderStaging();
-      });
+    document.getElementById("closeBannerBtn").addEventListener("click", () => {
+      document.getElementById("statusBanner").classList.add("hidden");
+    });
 
-      document.getElementById('targetMealSelect').addEventListener('change', () => {
-        document.getElementById('stageMealLabel').textContent = document.getElementById('targetMealSelect').value;
-      });
+    document.getElementById("analyzeFoodBtn").addEventListener("click", handleAnalyzeFood);
+    document.getElementById("voiceBtn").addEventListener("click", handleVoiceInput);
+    document.getElementById("lookupBarcodeBtn").addEventListener("click", handleBarcodeLookup);
+    document.getElementById("scanLabelBtn").addEventListener("click", handleLabelScan);
 
-      // Fasting Timer
-      document.getElementById('startFastBtn').addEventListener('click', () => {
-        state.fasting.hours = Number(document.getElementById('fastPresetSelect').value) || 16;
-        state.fasting.active = true;
-        state.fasting.startTime = Date.now();
-        saveState();
-        updateFastingUI();
-        showToast(`Started ${state.fasting.hours}h fast`);
-      });
+    document.getElementById("addManualBtn").addEventListener("click", () => {
+      const name = document.getElementById("manualName").value.trim();
+      const calories = Number(document.getElementById("manualCal").value) || 0;
+      const protein = Number(document.getElementById("manualPro").value) || 0;
+      const carbs = Number(document.getElementById("manualCarb").value) || 0;
+      const fat = Number(document.getElementById("manualFat").value) || 0;
+      const meal = document.getElementById("mealTypeSelect").value;
+      if (!name) return showBanner("Enter a food name.", "warn");
+      addFoodItems([{ name, calories, protein, carbs, fat }], meal);
+      ["manualName", "manualCal", "manualPro", "manualCarb", "manualFat"].forEach((id) => (document.getElementById(id).value = ""));
+      showBanner(`Added "${name}" to ${meal}.`, "info");
+      switchTab("today");
+    });
 
-      document.getElementById('endFastBtn').addEventListener('click', () => {
+    document.getElementById("saveKeyBtn").addEventListener("click", () => {
+      state.apiKey = document.getElementById("apiKeyInput").value.trim();
+      saveState();
+      showBanner("Gemini API key saved locally in your browser.", "info");
+    });
+
+    document.getElementById("saveGoalsBtn").addEventListener("click", () => {
+      const cals = Math.max(800, Number(document.getElementById("calorieGoalInput").value) || 2200);
+      const goalName = document.getElementById("presetGoalSelect").value;
+      const ratio = PRESET_RATIOS[goalName] || PRESET_RATIOS["Balanced"];
+      state.calories = cals;
+      state.goalName = goalName;
+      state.protein = Math.round((cals * ratio.p) / 4);
+      state.carbs = Math.round((cals * ratio.c) / 4);
+      state.fat = Math.round((cals * ratio.f) / 9);
+      saveState();
+      renderDashboard();
+      showBanner(`Updated target to ${cals} kcal (${goalName}).`, "info");
+    });
+
+    document.getElementById("toggleFastBtn").addEventListener("click", () => {
+      if (state.fasting.active) {
         state.fasting.active = false;
         state.fasting.startTime = null;
-        saveState();
-        updateFastingUI();
-        showToast('Fast ended');
-      });
-
-      function updateFastingUI() {
-        const badge = document.getElementById('fastingStatusBadge');
-        const phase = document.getElementById('fastPhaseLabel');
-        const clock = document.getElementById('fastCountdown');
-        const started = document.getElementById('fastStartedAt');
-
-        if (!state.fasting.active || !state.fasting.startTime) {
-          badge.textContent = 'Eating Window / Idle';
-          phase.textContent = 'Eating Window / Ready to Fast';
-          clock.textContent = '00:00:00';
-          started.textContent = '';
-          return;
-        }
-
-        const targetMs = (state.fasting.hours || 16) * 3600 * 1000;
-        const elapsed = Date.now() - state.fasting.startTime;
-        const remaining = Math.max(0, targetMs - elapsed);
-        const hrs = String(Math.floor(remaining / 3600000)).padStart(2, '0');
-        const mins = String(Math.floor((remaining % 3600000) / 60000)).padStart(2, '0');
-        const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
-
-        const done = remaining === 0;
-        badge.textContent = done ? 'Fast Complete!' : `Fasting (${state.fasting.hours}h)`;
-        phase.textContent = done ? 'Goal Reached — Eating Window Open' : `Fasting (${state.fasting.hours}:${24 - state.fasting.hours} Protocol)`;
-        clock.textContent = `${hrs}:${mins}:${secs}`;
-        started.textContent = `Started ${new Date(state.fasting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        state.fasting.active = true;
+        state.fasting.startTime = Date.now();
+        state.fasting.targetHours = Number(document.getElementById("fastingProtocolSelect").value) || 16;
       }
-
-      // Goals & Settings
-      function syncGoalsForm() {
-        document.getElementById('apiKeyInput').value = state.apiKey || '';
-        document.getElementById('modelIdInput').value = state.modelId || DEFAULT_MODEL;
-        document.getElementById('statSex').value = state.stats.sex;
-        document.getElementById('statAge').value = state.stats.age;
-        document.getElementById('statWeight').value = state.stats.weightLbs;
-        document.getElementById('statHeight').value = state.stats.heightIn;
-        document.getElementById('statActivity').value = state.stats.activity;
-
-        document.getElementById('goalCalInput').value = state.targets.calories;
-        document.getElementById('goalCalSlider').value = Math.min(5000, Math.max(1000, state.targets.calories));
-        document.getElementById('targetProtein').value = state.targets.protein;
-        document.getElementById('targetNetCarbs').value = state.targets.netCarbs;
-        document.getElementById('targetTotalCarbs').value = state.targets.totalCarbs;
-        document.getElementById('targetFat').value = state.targets.fat;
-
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-          const active = btn.dataset.mode === state.goalMode;
-          btn.className = `mode-btn py-2.5 px-3 rounded-xl border text-xs font-semibold ${active ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-300'}`;
-        });
-      }
-
-      document.getElementById('goalCalSlider').addEventListener('input', (e) => {
-        const cal = Number(e.target.value);
-        state.targets = computeMacrosForCalories(cal, state.goalMode, state.targets.netCarbs);
-        saveState();
-        syncUI();
-      });
-
-      document.getElementById('goalCalInput').addEventListener('change', (e) => {
-        const cal = Math.max(800, Math.min(8000, Number(e.target.value) || 2000));
-        state.targets = computeMacrosForCalories(cal, state.goalMode, state.targets.netCarbs);
-        saveState();
-        syncUI();
-      });
-
-      document.getElementById('quickCalInput').addEventListener('change', (e) => {
-        const cal = Math.max(800, Math.min(8000, Number(e.target.value) || 2000));
-        state.targets = computeMacrosForCalories(cal, state.goalMode, state.targets.netCarbs);
-        saveState();
-        syncUI();
-      });
-
-      document.getElementById('calcTdeeBtn').addEventListener('click', () => {
-        const sex = document.getElementById('statSex').value;
-        const age = Number(document.getElementById('statAge').value) || 35;
-        const lbs = Number(document.getElementById('statWeight').value) || 180;
-        const inches = Number(document.getElementById('statHeight').value) || 70;
-        const act = Number(document.getElementById('statActivity').value) || 1.55;
-        const kg = lbs * 0.453592;
-        const cm = inches * 2.54;
-        const bmr = 10 * kg + 6.25 * cm - 5 * age + (sex === 'male' ? 5 : -161);
-        let tdee = Math.round(bmr * act);
-        if (state.goalMode === 'lose') tdee -= 400;
-        if (state.goalMode === 'gain') tdee += 300;
-        state.stats = { sex, age, weightLbs: lbs, heightIn: inches, activity: act };
-        state.targets = computeMacrosForCalories(Math.max(1200, tdee), state.goalMode, state.targets.netCarbs);
-        saveState();
-        syncUI();
-        showToast(`Suggested target set to ${state.targets.calories} kcal`);
-      });
-
-      document.getElementById('saveGoalsBtn').addEventListener('click', () => {
-        state.targets = {
-          calories: Number(document.getElementById('goalCalInput').value) || 2000,
-          protein: Number(document.getElementById('targetProtein').value) || 150,
-          netCarbs: Number(document.getElementById('targetNetCarbs').value) || 25,
-          totalCarbs: Number(document.getElementById('targetTotalCarbs').value) || 50,
-          fat: Number(document.getElementById('targetFat').value) || 120
-        };
-        saveState();
-        syncUI();
-        showToast('Goals saved!');
-      });
-
-      document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
-        state.apiKey = document.getElementById('apiKeyInput').value.trim();
-        state.modelId = document.getElementById('modelIdInput').value.trim() || DEFAULT_MODEL;
-        saveState();
-        renderToday();
-        showToast(`Saved key & model (${state.modelId})`);
-      });
-
-      // Date navigation
-      document.getElementById('journalDate').addEventListener('change', (e) => {
-        if (e.target.value) { state.selectedDate = e.target.value; saveState(); renderToday(); }
-      });
-      document.getElementById('prevDayBtn').addEventListener('click', () => {
-        const d = new Date(state.selectedDate + 'T12:00:00');
-        d.setDate(d.getDate() - 1);
-        state.selectedDate = d.toISOString().slice(0, 10);
-        saveState(); renderToday();
-      });
-      document.getElementById('nextDayBtn').addEventListener('click', () => {
-        const d = new Date(state.selectedDate + 'T12:00:00');
-        d.setDate(d.getDate() + 1);
-        state.selectedDate = d.toISOString().slice(0, 10);
-        saveState(); renderToday();
-      });
-      document.getElementById('todayBtn').addEventListener('click', () => {
-        state.selectedDate = new Date().toISOString().slice(0, 10);
-        saveState(); renderToday();
-      });
-
-      // Export / Import
-      document.getElementById('exportJsonBtn').addEventListener('click', () => {
-        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `macroflow-backup-${state.selectedDate}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-
-      document.getElementById('importJsonInput').addEventListener('change', async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        try {
-          const imported = JSON.parse(await file.text());
-          state = { ...defaultState(), ...imported };
-          saveState();
-          syncUI();
-          showToast('Backup restored!');
-        } catch {
-          showToast('Invalid JSON file');
-        }
-      });
-
-      // Global Delegated Clicks & Staging Edits
-      document.addEventListener('click', (e) => {
-        const tabBtn = e.target.closest('[data-tab]');
-        if (tabBtn) {
-          switchTab(tabBtn.dataset.tab);
-          return;
-        }
-
-        const calBtn = e.target.closest('[data-cal-delta]');
-        if (calBtn) {
-          adjustCalories(Number(calBtn.dataset.calDelta));
-          return;
-        }
-
-        const modeBtn = e.target.closest('[data-mode]');
-        if (modeBtn) {
-          state.goalMode = modeBtn.dataset.mode;
-          state.targets = computeMacrosForCalories(state.targets.calories, state.goalMode, state.targets.netCarbs);
-          saveState();
-          syncUI();
-          return;
-        }
-
-        const delBtn = e.target.closest('[data-delete-meal]');
-        if (delBtn) {
-          const meal = delBtn.dataset.deleteMeal;
-          const idx = Number(delBtn.dataset.deleteIdx);
-          getDayEntries()[meal].splice(idx, 1);
-          saveState();
-          renderToday();
-          return;
-        }
-
-        const quickBtn = e.target.closest('[data-quick-idx]');
-        if (quickBtn) {
-          const idx = Number(quickBtn.dataset.quickIdx);
-          const food = state.savedFoods[idx];
-          if (food) {
-            const meal = document.getElementById('quickAddMeal').value || 'Snacks';
-            getDayEntries()[meal].push({ ...food });
-            saveState();
-            renderToday();
-            showToast(`Added ${food.name} to ${meal}`);
-          }
-        }
-      });
-
-      document.getElementById('stagingList').addEventListener('change', (e) => {
-        const input = e.target.closest('[data-stage-idx]');
-        if (!input) return;
-        const idx = Number(input.dataset.stageIdx);
-        const field = input.dataset.stageField;
-        if (!stagedItems[idx]) return;
-        stagedItems[idx][field] = field === 'name' ? input.value : Number(input.value) || 0;
-      });
-
-      function syncUI() {
-        renderToday();
-        syncGoalsForm();
-        updateFastingUI();
-      }
-
-      syncUI();
-      setInterval(updateFastingUI, 1000);
+      saveState();
+      updateFastingUI();
     });
+
+    const datePicker = document.getElementById("datePicker");
+    datePicker.value = activeDate;
+    datePicker.addEventListener("change", (e) => {
+      activeDate = e.target.value || todayISO();
+      renderDashboard();
+    });
+
+    document.getElementById("apiKeyInput").value = state.apiKey || "";
+    document.getElementById("calorieGoalInput").value = state.calories;
+    document.getElementById("presetGoalSelect").value = state.goalName;
+
+    lucide.createIcons();
+    renderDashboard();
+    updateFastingUI();
+    setInterval(updateFastingUI, 1000);
   </script>
 </body>
 </html>
